@@ -1,0 +1,83 @@
+---
+title: "matrix project"
+author: "David Orozco"
+date: "April 24, 2019"
+output: html_document
+---
+
+```{r}
+library(tidyverse)
+library(ggplot2)
+library(lubridate)
+
+```
+```{r}
+df <- read.csv("matrix_data.csv")
+df <- df %>% mutate(first4 = str_sub(df$Yday,1,4), last3 = str_pad(str_sub(df$Yday,5), 3, pad = "0")) %>% unite("Yday","first4","last3",sep ="") %>% mutate(ymd = as.Date(Yday,
+  format = "%Y%j")) %>% mutate(dayssince = ymd - ymd[1])
+
+## date restructure with multiple formats
+
+df$dayssince <- as.numeric(df$dayssince)
+# turn days since to numeric
+
+```
+
+
+```{r}
+
+# plot time series
+ggplot(data = df, aes(x = dayssince, y = Extent))+
+  geom_line(color = "blue")+ ggtitle("Sea Ice Extent(1978-Current)")
+
+ggplot(data = filter(df,dayssince >=10000),aes(x = dayssince, y = Extent))+
+  geom_line(color = "blue")+ ggtitle("Sea Ice Extent the last 4745 days")
+
+ggplot(data = filter(df,dayssince >=14000),aes(x = dayssince, y = Extent))+
+  geom_line(color = "blue")+ ggtitle("Sea Ice Extent the last 745 days")
+```
+
+```{r}
+# funcatino that makes an hankel matrix based on data 
+hankel <- function(n,m,data){
+  k <- n - m + 1
+H <- matrix(NA, nrow=m, ncol=k)
+for(i in 1:m){
+  H[i,] <- data[i:(k+i-1)]
+}
+hank <- H
+}
+```
+```{r}
+
+R<-hankel(11,6,df$Extent)
+R
+
+```
+
+```{r}
+#2 Matrix Norm 
+M <- cbind(c(1,-1,-1),c(-2,2,-1),c(1,1,1))
+M
+norm(M, type = "2")
+norm(R,type = "2")
+I <- diag(ncol(R))
+I
+```
+
+```{r}
+Bmat <- function(matrix,L){
+  nr <- norm(matrix, type = "2")
+I <- diag(ncol(matrix))
+if(L >= (nr/2)){
+   B = (1/(2*L))*matrix
+ }else {
+   B = (matrix + ((nr-2*L)*I))/(2*(nr-L))
+ }
+goof <- B
+
+}
+
+print(Bmat(R,.1))
+```
+
