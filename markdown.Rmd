@@ -9,10 +9,12 @@ output: html_document
 library(tidyverse)
 library(ggplot2)
 library(lubridate)
+library(stringr)
+library(tidyr)
 
 ```
 ```{r}
-df <- read.csv("matrix_data.csv")
+df <- read.csv("~/Downloads/matrix_data.csv")
 df <- df %>% mutate(first4 = str_sub(df$Yday,1,4), last3 = str_pad(str_sub(df$Yday,5), 3, pad = "0")) %>% unite("Yday","first4","last3",sep ="") %>% mutate(ymd = as.Date(Yday,
   format = "%Y%j")) %>% mutate(dayssince = ymd - ymd[1])
 
