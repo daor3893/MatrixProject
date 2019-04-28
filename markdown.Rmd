@@ -39,19 +39,21 @@ ggplot(data = filter(df,dayssince >=14000),aes(x = dayssince, y = Extent))+
 
 ```{r}
 # funcatino that makes an hankel matrix based on data 
-hankel <- function(n,m,data){
+trajectory <- function(n,m,data){
   k <- n - m + 1
 H <- matrix(NA, nrow=m, ncol=k)
 for(i in 1:m){
   H[i,] <- data[i:(k+i-1)]
 }
-hank <- H
+t <- H
 }
 ```
 ```{r}
 
-R<-hankel(11,6,df$Extent)
-R
+h <- 1:11
+t <- trajectory(((2*11)-1),11,h)
+t[is.na(t)] <- 0
+t
 
 ```
 
