@@ -104,5 +104,24 @@ lamCut <- norm(R, type="F")*0.05
 B <- ScaleRtoB(R,lamCut)
 B
 ```
+```{r}
+# Iterative procedure to find approximate projector
+AproxP <- function(B) {
+  Bs <- B %*% B
+  aP <- 3*Bs - 2*(Bs %*% B)
+  aP
+}
+
+# Test that function works
+aP <- AproxP(B)
+aP
+
+testAproxP <- DiagAve(aP %*% testTraj)
+testAproxP
+```
+```{r}
+# Main method
+
+```
 
 
