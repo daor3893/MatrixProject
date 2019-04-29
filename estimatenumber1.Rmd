@@ -1,0 +1,138 @@
+---
+title: "matproject1"
+author: "David Orozco"
+date: "April 29, 2019"
+output: html_document
+---
+
+```{r}
+library(tidyverse)
+library(ggplot2)
+library(lubridate)
+library(stringr)
+
+```
+```{r}
+df <- read.csv("matrix_data.csv")
+df <- df %>% mutate(first4 = str_sub(df$Yday,1,4), last3 = str_pad(str_sub(df$Yday,5), 3, pad = "0")) %>% unite("Yday","first4","last3",sep ="") %>% mutate(ymd = as.Date(Yday,
+  format = "%Y%j")) %>% mutate(dayssince = ymd - ymd[1])
+
+## date restructure with multiple formats
+
+df$dayssince <- as.numeric(df$dayssince)
+# turn days since to numeric
+
+```
+```{r}
+
+# plot time series
+ggplot(data = df, aes(x = dayssince, y = Extent))+
+  geom_line(color = "blue")+ ggtitle("Sea Ice Extent(1978-Current)")
+
+ggplot(data = filter(df,dayssince >=10000),aes(x = dayssince, y = Extent))+
+  geom_line(color = "blue")+ ggtitle("Sea Ice Extent the last 4745 days")
+
+ggplot(data = filter(df,dayssince >=14000),aes(x = dayssince, y = Extent))+
+  geom_line(color = "blue")+ ggtitle("Sea Ice Extent the last 745 days")
+```
+
+```{r}
+# funcatino that makes an hankel matrix based on data 
+trajectory <- function(data){
+  m = length(data)
+  n = 2*m 
+  k <- n - m +1
+H <- matrix(NA, nrow=m, ncol=k)
+for(i in 1:m){
+  H[i,] <- data[i:(k+i-1)]
+}
+t <- H
+}
+
+h <- 1:10
+R <- trajectory(h)
+R[is.na(R)] <- 0
+R
+dim(R)
+```
+```{r}
+Bmat <- function(matrix,L){
+  nr <- norm(matrix, type = "2")
+  I <- diag(ncol(matrix))
+  if(L >= (nr/2)){
+   B = (1/(2*L))*matrix
+  }else {
+   B = (matrix + ((nr-2*L)*I))/(2*(nr-L))
+  }
+goof <- B
+}
+
+```
+```{r}
+reextract <- function(matrix){
+  K <- ncol(matrix)
+  M <- nrow(matrix)
+  x <- vector("numeric",length = (K))
+  for(j in 1:K){
+    if(matrix[1,j] == 0){
+      break
+    }
+    x[j] <- matrix[1,j]
+  }
+  for(i in 2:M){
+    if(matrix[i,K]==0){
+      break
+    }
+    x[(K+i-1)] <- matrix[i,K]
+  }
+  x
+}
+```
+```{r}
+## for really high lamda
+smaller <- filter(df,dayssince >=14000)
+x <- trajectory(smaller$Extent) # trajectory matrix for last 745 data points
+x[is.na(x)] <- 0 # got rid of NA's
+R <- x%*%t(x) # Calculated R
+N <- norm(R, type = "2") # used the norm as our lambda to include as much noise as possible, to recreate time series
+B <- Bmat(R,N) # scaled R by function B
+
+BB <- B %*% B # B^2
+result <- (3*BB - 2*BB%*%B) ## applied poly function on scaled matrix B
+
+estimate <- as.tibble(reextract(result)) ##extract new estimated data points for our time series
+estimate <- estimate[1:746,]*10000 ## rescaling it to compare to original time series
+
+ggplot(data = smaller,aes(x = dayssince, y = Extent))+
+  geom_line(data = estimate, aes(y = value, x = smaller$dayssince))+
+  geom_line(color = "blue") + ggtitle("for lambda = norm(R)")
+
+```
+
+```{r}
+
+
+## for really high lamda
+smaller <- filter(df,dayssince >=14000)
+x <- trajectory(smaller$Extent) # trajectory matrix for last 745 data points
+x[is.na(x)] <- 0 # got rid of NA's
+R <- x%*%t(x) # Calculated R
+N <- norm(R, type = "2")*.05 # used the 5% of our norm as our lambda to reduce as much noise as possible, to recreate time series
+B <- Bmat(R,N) # scaled R by function B
+
+BB <- B %*% B # B^2
+result <- (3*BB - 2*BB%*%B) ## applied poly function on scaled matrix B,
+
+# note: the first entrie in `result` is really huge compared to the rest ( 4,000 compare to high 10's) gonnna get rid of it to see if the graph approx the time series
+
+estimate <- as.tibble(reextract(result)) ##extract new estimated data points for our time series
+estimate <- estimate[2:746,]*10000 ## rescaling it to compare to original time series
+timeadjust <- smaller[-1,] ## getting rid of first row to account for omiting first entrie in result( the massive one)
+ggplot(data = timeadjust,aes(x = dayssince, y = Extent))+
+  geom_line(data = estimate, aes(y = value, x = timeadjust$dayssince))+
+  geom_line(color = "blue")+ ggtitle("for lambda = 5% of norm(R)")
+
+```
+
+
+
