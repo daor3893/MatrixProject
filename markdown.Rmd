@@ -63,25 +63,35 @@ t
 #2 Matrix Norm 
 M <- cbind(c(1,-1,-1),c(-2,2,-1),c(1,1,1))
 M
-norm(M, type = "2")
-norm(R,type = "2")
-I <- diag(ncol(R))
-I
+norm(M, type = "F")
 ```
 
 ```{r}
 Bmat <- function(matrix,L){
-  nr <- norm(matrix, type = "2")
-I <- diag(ncol(matrix))
-if(L >= (nr/2)){
-   B = (1/(2*L))*matrix
- }else {
-   B = (matrix + ((nr-2*L)*I))/(2*(nr-L))
- }
-goof <- B
-
+  nr <- norm(matrix, type = "F")
+  I <- diag(ncol(matrix))
+  if(L >= (nr/2)){
+     B = (1/(2*L))*matrix
+  }else {
+     B = (matrix + ((nr-2*L)*I))/(2*(nr-L))
+  }
+  goof <- B
 }
 
-print(Bmat(R,.1))
+print(Bmat(M,.1))
+```
+
+```{r}
+diagAve <- function(matrix) {
+  x <- vector(mode="numeric", length=0)
+  m <- nrow(matrix)
+  k <- ncol(matrix)
+  n <- k+m-1
+  for (i in 1:(m-1)) {
+    val <- 
+    x <- c(x, )
+  }
+}
+test <- diagAve(M)
 ```
 
