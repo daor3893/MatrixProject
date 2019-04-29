@@ -1,0 +1,56 @@
+---
+title: "approxProjectors"
+author: "Israel Miles, David Orozco"
+date: "April 29, 2019"
+output: html_document
+---
+
+```{r}
+# Load libraries
+library(tidyverse)
+library(ggplot2)
+library(lubridate)
+library(stringr)
+```
+```{r}
+# Load and prepare data
+df <- read.csv("~/Downloads/matrix_data.csv")
+df <- df %>% mutate(first4 = str_sub(df$Yday,1,4), last3 = str_pad(str_sub(df$Yday,5), 3, pad = "0")) %>% unite("Yday","first4","last3",sep ="") %>% mutate(ymd = as.Date(Yday,
+  format = "%Y%j")) %>% mutate(dayssince = ymd - ymd[1])
+
+## date restructure with multiple formats, turn days since to numeric
+df$dayssince <- as.numeric(df$dayssince)
+```
+```{r}
+# Plot ice extent time series
+ggplot(data = df, aes(x = dayssince, y = Extent))+
+  geom_line(color = "blue")+ ggtitle("Sea Ice Extent(1978-Current)")
+
+ggplot(data = filter(df,dayssince >=10000),aes(x = dayssince, y = Extent))+
+  geom_line(color = "blue")+ ggtitle("Sea Ice Extent the last 4745 days")
+
+ggplot(data = filter(df,dayssince >=14000),aes(x = dayssince, y = Extent))+
+  geom_line(color = "blue")+ ggtitle("Sea Ice Extent the last 745 days")
+```
+```{r}
+# Create trajectory matrix
+Trajectory <- function(data) {
+  K <- length(data)
+  M <- K-1
+  traj <- matrix(NA, nrow=M, ncol=K)
+  for (i in 1:M) {
+    traj[i,] <- data[i:(K+i-1)]
+  }
+  traj[is.na(traj)] <- 0
+  traj
+}
+
+# Test function, should be 9x10 with zeros
+list <- seq(1,10, length=10)
+test <- Trajectory(list)
+test
+```
+```{r}
+
+```
+
