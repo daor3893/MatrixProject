@@ -34,8 +34,7 @@ ggplot(data = filter(df,dayssince >=14000),aes(x = dayssince, y = Extent))+
 ```
 ```{r}
 # Create trajectory matrix
-Trajectory <- function(data) {
-  k <- length(data)
+Trajectory <- function(data,k) {
   m <- k-1
   traj <- matrix(NA, nrow=m, ncol=k)
   for (i in 1:m) {
@@ -47,7 +46,7 @@ Trajectory <- function(data) {
 
 # Test that matrix is hankel structure and 9x10 with zeros
 list <- seq(1,10, length=10)
-testTraj <- Trajectory(list)
+testTraj <- Trajectory(list,6)
 testTraj
 ```
 ```{r}
@@ -55,18 +54,28 @@ testTraj
 DiagAve <- function(matrix) {
   m <- nrow(matrix)
   k <- ncol(matrix)
-  x <- vector("numeric",length = (k))
-  for(j in 1:k){
-    if(matrix[1,j] == 0){
-      break
+  x <- vector(mode="numeric", length=m+k-1)
+  for (i in 1:m) {
+    diag = 0
+    r = i # row start point
+    c = 1 # col start point, always left col
+    while(r > 0) {
+      diag = diag + matrix[r,c]
+      r = r - 1
+      c = c + 1
     }
-    x[j] <- matrix[1,j]
+    x[i] <- mean(diag/i)
   }
-  for(i in 2:m){
-    if(matrix[i,k]==0){
-      break
+  for (j in 2:k) {
+    diag = 0
+    r = m
+    c = j
+    while(c <= k) {
+      diag = diag + matrix[r,c]
+      r = r - 1
+      c = c + 1
     }
-    x[(k+i-1)] <- matrix[i,k]
+    x[m+j-1] <- mean(diag/(k-j+1))
   }
   x
 }
@@ -76,6 +85,7 @@ testDiagAve <- DiagAve(testTraj)
 testDiagAve
 ```
 ```{r}
+# Scale R to B matrix
 
 ```
 
