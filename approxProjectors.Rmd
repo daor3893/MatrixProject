@@ -86,7 +86,23 @@ testDiagAve
 ```
 ```{r}
 # Scale R to B matrix
+ScaleRtoB <- function(matrix,lamCut) {
+  I <- diag(ncol(matrix))
+  norm <- norm(matrix, type="F")
+  if(lamCut >= norm/2) {
+    B <- matrix/(2*lamCut)
+  }
+  else {
+    B <- (matrix + (norm-2*lamCut)*I)/(2*(norm - lamCut))
+  }
+  B
+}
 
+# Test that function works
+R <- testTraj %*% t(testTraj)
+lamCut <- norm(R, type="F")*0.05
+B <- ScaleRtoB(R,lamCut)
+B
 ```
 
 
