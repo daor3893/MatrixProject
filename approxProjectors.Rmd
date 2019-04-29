@@ -35,20 +35,45 @@ ggplot(data = filter(df,dayssince >=14000),aes(x = dayssince, y = Extent))+
 ```{r}
 # Create trajectory matrix
 Trajectory <- function(data) {
-  K <- length(data)
-  M <- K-1
-  traj <- matrix(NA, nrow=M, ncol=K)
-  for (i in 1:M) {
-    traj[i,] <- data[i:(K+i-1)]
+  k <- length(data)
+  m <- k-1
+  traj <- matrix(NA, nrow=m, ncol=k)
+  for (i in 1:m) {
+    traj[i,] <- data[i:(k+i-1)]
   }
   traj[is.na(traj)] <- 0
   traj
 }
 
-# Test function, should be 9x10 with zeros
+# Test that matrix is hankel structure and 9x10 with zeros
 list <- seq(1,10, length=10)
-test <- Trajectory(list)
-test
+testTraj <- Trajectory(list)
+testTraj
+```
+```{r}
+# Extract original time series from the trajectory matrix
+ExtractData <- function(matrix) {
+  m <- nrow(matrix)
+  k <- ncol(matrix)
+  x <- vector("numeric",length = (k))
+  for(j in 1:k){
+    if(matrix[1,j] == 0){
+      break
+    }
+    x[j] <- matrix[1,j]
+  }
+  for(i in 2:m){
+    if(matrix[i,k]==0){
+      break
+    }
+    x[(k+i-1)] <- matrix[i,k]
+  }
+  x
+}
+
+# Test that extracted data is 1...10
+testExtract <- ExtractData(testTraj)
+testExtract
 ```
 ```{r}
 
