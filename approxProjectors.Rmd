@@ -52,7 +52,7 @@ testTraj
 ```
 ```{r}
 # Extract original time series from the trajectory matrix
-ExtractData <- function(matrix) {
+DiagAve <- function(matrix) {
   m <- nrow(matrix)
   k <- ncol(matrix)
   x <- vector("numeric",length = (k))
@@ -72,10 +72,11 @@ ExtractData <- function(matrix) {
 }
 
 # Test that extracted data is 1...10
-testExtract <- ExtractData(testTraj)
-testExtract
+testDiagAve <- DiagAve(testTraj)
+testDiagAve
 ```
 ```{r}
 
 ```
+
 
