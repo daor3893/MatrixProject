@@ -160,5 +160,78 @@ ggplot(data=data, aes(x=dayssince,y=Extent)) +
   geom_line()+
   geom_line(data = xitable, aes(y = value, x = data$dayssince),color = "blue")
 ```
+```{r}
 
+prediction <- function(projector,vector){
+  f1 = (diag(ncol(projector))-projector) # (I-P)
+  f2 = f1[,ncol(f1)] # last column of (I-P)
+  ff <- f1 %*% f2 # vector (I-P)(I-P)m
+  M = nrow(ff)
+  fm = ff[M] # number fm
+  k = 500 # number of added predictions
+  x <-matrix(NA, nrow=1, ncol=(M-1))#empty vec
+  N = length(vector)
+  if(fm != 0){ # if the last isnt zero
+    for(i in 1:k){ # for number of predictions
+      for(j in 1:(M-1)){
+        x[j]<- ff[j]*vector[N+i-M+j]
+      }
+      s <- sum(x)
+      vector[N+i] <- (-1/fm)*s
+    }
+  }
+  xpred <- vector
+}
+
+```
+```{r}
+h <- df$Extent
+k = 1000
+X <- Trajectory(h,k)
+R <- X %*% t(X)
+lamCut <- norm(R, type="2")*0.0001
+B <- ScaleRtoB(R,lamCut)
+P <- AproxP(B)
+XI <- P %*% X
+xi <- DiagAve(XI)
+test <- DiagAve(X)
+xi <- xi[1:k]
+xitable <- as.tibble(xi)
+pr <- prediction(P,xi)
+J <- as.tibble(pr)
+
+
+data <- df[1:k,]
+data2 <- df[1:(length(pr)),]
+ggplot(data=data, aes(x=dayssince,y=Extent)) +
+  geom_line()+
+  geom_line(data = xitable, aes(y = value, x = data$dayssince),color = "blue",size = 1.2)+
+    geom_line(data = J, aes(y = value, x = data2$dayssince),color = "red",size = 1)
+
+```
+
+```{r}
+h <- df$Extent
+k = 200
+X <- Trajectory(h,k)
+R <- X %*% t(X)
+lamCut <- norm(R, type="2")*0.001
+B <- ScaleRtoB(R,lamCut)
+P <- AproxP(B)
+XI <- P %*% X
+xi <- DiagAve(XI)
+test <- DiagAve(X)
+xi <- xi[1:k]
+xitable <- as.tibble(xi)
+pr <- prediction(P,xi)
+J <- as.tibble(pr)
+
+
+data <- df[1:k,]
+data2 <- df[1:(length(pr)),]
+ggplot(data=data, aes(x=dayssince,y=Extent)) +
+  geom_line()+
+  geom_line(data = xitable, aes(y = value, x = data$dayssince),color = "blue",size = 1.2)+
+    geom_line(data = J, aes(y = value, x = data2$dayssince),color = "red",size = 1)
+```
 
