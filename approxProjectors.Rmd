@@ -44,7 +44,7 @@ Trajectory <- function(data,k) {
   traj
 }
 
-# Test that matrix is hankel structure and 9x10 with zeros
+# Test that matrix is hankel structure and 5x6
 list <- seq(1,10, length=10)
 testTraj <- Trajectory(list,6)
 testTraj
@@ -119,9 +119,46 @@ aP
 testAproxP <- DiagAve(aP %*% testTraj)
 testAproxP
 ```
-```{r}
+```{r,echo=FALSE}
 # Main method
+k <- 500
+X <- Trajectory(df$Extent,k)
+R <- X %*% t(X)
+lamCut <- norm(R, type="F")*0.3
+B <- ScaleRtoB(R,lamCut)
+P <- AproxP(B)
+XI <- P %*% X
+xi <- DiagAve(XI)
+test <- DiagAve(X)
+xi <- xi[1:k]
+length(xi)
+xitable <- as.tibble(xi)
 
+data <- df %>% filter(dayssince <= 998)
+ggplot(data=data, aes(x=dayssince,y=Extent)) +
+  geom_line()+
+  geom_line(data = xitable, aes(y = value, x = data$dayssince),color = "blue")
+
+```
+```{r,echo=FALSE}
+# Main method
+k <- 500
+X <- Trajectory(df$Extent,k)
+R <- X %*% t(X)
+lamCut <- norm(R, type="F")*0.00001
+B <- ScaleRtoB(R,lamCut)
+P <- AproxP(B)
+XI <- P %*% X
+xi <- DiagAve(XI)
+test <- DiagAve(X)
+xi <- xi[1:k]
+length(xi)
+xitable <- as.tibble(xi)
+
+data <- df %>% filter(dayssince <= 998)
+ggplot(data=data, aes(x=dayssince,y=Extent)) +
+  geom_line()+
+  geom_line(data = xitable, aes(y = value, x = data$dayssince),color = "blue")
 ```
 
 
