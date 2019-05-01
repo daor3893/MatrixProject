@@ -1,0 +1,221 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+---
+title: "approxProjectors"
+author: "Israel Miles, David Orozco"
+date: "April 29, 2019"
+output: html_document
+---
+
+```{r}
+# Load libraries
+library(tidyverse)
+library(ggplot2)
+library(lubridate)
+library(stringr)
+```
+```{r}
+# Load and prepare data
+df <- read.csv("matrix_data.csv")
+df <- df %>% mutate(first4 = str_sub(df$Yday,1,4), last3 = str_pad(str_sub(df$Yday,5), 3, pad = "0")) %>% unite("Yday","first4","last3",sep ="") %>% mutate(ymd = as.Date(Yday,
+  format = "%Y%j")) %>% mutate(dayssince = ymd - ymd[1])
+
+## date restructure with multiple formats, turn days since to numeric
+df$dayssince <- as.numeric(df$dayssince)
+```
+```{r}
+# Plot ice extent time series
+ggplot(data = df, aes(x = dayssince, y = Extent))+
+  geom_line(color = "blue")+ ggtitle("Sea Ice Extent(1978-Current)") +xlab("Days Elapsed since 1978")
+
+ggplot(data = filter(df,dayssince >=11000),aes(x = dayssince, y = Extent))+
+  geom_line(color = "blue")+ ggtitle("Sea Ice Extent the last 4745 days")+xlab("Days Elapsed since 1978")
+
+```
+```{r}
+# Create trajectory matrix
+Trajectory <- function(data,k) {
+  m <- k-1
+  traj <- matrix(NA, nrow=m, ncol=k)
+  for (i in 1:m) {
+    traj[i,] <- data[i:(k+i-1)]
+  }
+  traj[is.na(traj)] <- 0
+  traj
+}
+```
+```{r}
+# Extract original time series from the trajectory matrix
+DiagAve <- function(matrix) {
+  m <- nrow(matrix)
+  k <- ncol(matrix)
+  x <- vector(mode="numeric", length=m+k-1)
+  for (i in 1:m) {
+    diag = 0
+    r = i # row start point
+    c = 1 # col start point, always left col
+    while(r > 0) {
+      diag = diag + matrix[r,c]
+      r = r - 1
+      c = c + 1
+    }
+    x[i] <- mean(diag/i)
+  }
+  for (j in 2:k) {
+    diag = 0
+    r = m
+    c = j
+    while(c <= k) {
+      diag = diag + matrix[r,c]
+      r = r - 1
+      c = c + 1
+    }
+    x[m+j-1] <- mean(diag/(k-j+1))
+  }
+  x
+}
+
+```
+```{r}
+# Scale R to B matrix
+ScaleRtoB <- function(matrix,lamCut) {
+  I <- diag(ncol(matrix))
+  norm <- norm(matrix, type="F")
+  if(lamCut >= norm/2) {
+    B <- matrix/(2*lamCut)
+  }
+  else {
+    B <- (matrix + (norm-2*lamCut)*I)/(2*(norm - lamCut))
+  }
+  B
+}
+
+```
+```{r}
+# Iterative procedure to find approximate projector
+AproxP <- function(B) {
+  Bs <- B %*% B
+  aP <- 3*Bs - 2*(Bs %*% B)
+  aP
+}
+
+```
+```{r,echo=FALSE}
+# steup here
+k <- 500
+X <- Trajectory(df$Extent,k)
+R <- X %*% t(X)
+```
+```{r}
+# Method to approximate original time series based on lambda-cut
+approx <- function(L){
+  lamCut <- norm(R, type="2")*L
+  B <- ScaleRtoB(R,lamCut)
+  P <- AproxP(B)
+  XI <- P %*% X
+  xi <- DiagAve(XI)
+  xi <- xi[1:k]
+  as.tibble(xi)
+}
+```
+```{r}
+# Replicate data for 1%, 15%, and 40% of lambda cut respectively
+xitable1 <- approx(.01) %>% mutate(`Lambda-cut` = "L=1%") %>% mutate(dayssince = df$dayssince[1:k])
+xitable2 <- approx(.15) %>% mutate(`Lambda-cut` = "L=15%") %>% mutate(dayssince = df$dayssince[1:k])
+xitable3 <- approx(.40) %>% mutate(`Lambda-cut` = "L=40%") %>% mutate(dayssince = df$dayssince[1:k])
+xitable4 <- df[1:k,] %>% transmute(value = Extent,`Lambda-cut` = "Actual Time Series",dayssince)
+
+## tidying day here
+xtab <- full_join(xitable1,xitable2)
+xtab2 <- full_join(xitable3,xitable4)
+xtable <- full_join(xtab,xitable3)
+
+```
+```{r}
+data <- df[1:k,]
+ggplot(data=data, aes(x=dayssince,y=Extent)) +
+  geom_line()+
+    geom_line(data = xtable, aes(y = value, x =dayssince,color = `Lambda-cut`),size = 1)+
+    guides(fill = guide_legend(title = "Lambda-Cut"))+ggtitle("Approximations to original time series")+xlab("Days elapsed since 1978")
+```
+
+
+  
+```{r}
+prediction <- function(projector,vector,k){
+  f1 = (diag(ncol(projector))-projector) # (I-P)
+  f2 = f1[,ncol(f1)] # last column of (I-P)
+  ff <- f1 %*% f2 # vector (I-P)(I-P)m
+  M = nrow(ff)
+  fm = ff[M] # number fm
+  N = length(vector)
+  if(fm != 0){ # if the last isnt zero
+    for(i in 1:k){ # for number of predictions
+       x <-matrix(NA, nrow=1,ncol=(M-1))#empty
+       for(j in 1:(M-1)){
+        x[j]<- ff[j]*vector[(N+i-M+j)]
+      }
+      s <- sum(x)
+      vector[N+i] <- (-1/fm)*s
+    }
+  }
+  xpred <- vector
+}
+```
+
+```{r}
+# setup for iterative method
+data <- df$Extent
+k =500 # first k number of data observations
+n = 500 # number of predictions
+L = .01 # lambda cut
+xint<- data[1:k]
+X <- Trajectory(data,k)
+R <- X %*% t(X)
+lamCut <- norm(R, type="2")*L
+B <- ScaleRtoB(R,lamCut)
+P <- AproxP(B)
+```
+```{r}
+# Iterative function for projector
+IterativeP <- function(P,z){
+  for(i in 1:z){
+    P <- AproxP(P)
+  } 
+  result <-matrix(NA, nrow=(k+n),ncol=1)#empty
+  XI <- P %*% X
+  xi <- DiagAve(XI)
+  result[1:k] <- xi[1:k]
+  pr <- prediction(P,xint,n)
+  result[(k+1):(k+n)] <- pr[(k+1):(k+n)]
+  approx <- as.tibble(result)
+  approx
+}
+```
+```{r}
+# The iteration method was done for 1,5,and 10 iterations respectively.
+procedure1 <- IterativeP(P,1) %>% mutate(Iterations = "1") %>% mutate(dayssince = df$dayssince[1:(k+n)])
+procedure2 <- IterativeP(P,5) %>% mutate(Iterations = "3") %>% mutate(dayssince = df$dayssince[1:(k+n)])
+procedure3 <- IterativeP(P,10) %>% mutate(Iterations = "5") %>% mutate(dayssince = df$dayssince[1:(k+n)])
+
+
+prod <- full_join(procedure1,procedure2)
+procedure <- full_join(prod,procedure3)
+
+```
+```{r}
+
+data <- df[1:k,]
+data2 <- df[1:(k+n),]
+
+ggplot(data=data, aes(x=dayssince,y=Extent)) +
+  geom_line()+
+  geom_line(data = procedure, aes(y = V1, x = dayssince,color = Iterations),size = 1)+
+  geom_line(color = "black",size = 1)+ggtitle("Approximations to original time series with future predictions")+xlab("Days elapsed since 1978")
+
+
+```
+
+
